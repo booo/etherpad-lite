@@ -1,5 +1,5 @@
 /**
- * This code is mostly from the old Etherpad. Please help us to comment this code. 
+ * This code is mostly from the old Etherpad. Please help us to comment this code.
  * This helps other people to understand this code better and helps them to improve it.
  * TL;DR COMMENTS ON THIS FILE ARE HIGHLY APPRECIATED
  */
@@ -71,7 +71,7 @@ var padimpexp = (function()
     $('#importmessagefail').fadeOut("fast");
     var ret = window.confirm("Importing a file will overwrite the current text of the pad." + " Are you sure you want to proceed?");
     if (ret)
-    {        
+    {
       hidePanelCall = paddocbar.hideLaterIfNoOtherInteraction();
       currentImportTimer = window.setTimeout(function()
       {
@@ -95,7 +95,7 @@ var padimpexp = (function()
       }, 0);
       $('#importarrow').stop(true, true).hide();
       $('#importstatusball').show();
-      
+
       $("#import .importframe").load(function()
       {
         importDone();
@@ -250,7 +250,7 @@ var padimpexp = (function()
       $("#exportplaina").attr("href", pad_root_path + "/export/txt");
       $("#exportwordlea").attr("href", pad_root_path + "/export/wordle");
       $("#exportdokuwikia").attr("href", pad_root_path + "/export/dokuwiki");
-      
+
       //hide stuff thats not avaible if abiword is disabled
       if(clientVars.abiwordAvailable == "no")
       {
@@ -264,24 +264,24 @@ var padimpexp = (function()
       else if(clientVars.abiwordAvailable == "withoutPDF")
       {
         $("#exportpdfa").remove();
-        
+
         $("#exportworda").attr("href", pad_root_path + "/export/doc");
         $("#exportopena").attr("href", pad_root_path + "/export/odt");
-        
+
         $("#importexport").css({"height":"142px"});
         $("#importexportline").css({"height":"142px"});
-        
-        $("#importform").attr('action', pad_root_url + "/import"); 
+
+        $("#importform").attr('action', pad_root_url + "/import");
       }
       else
       {
         $("#exportworda").attr("href", pad_root_path + "/export/doc");
         $("#exportpdfa").attr("href", pad_root_path + "/export/pdf");
         $("#exportopena").attr("href", pad_root_path + "/export/odt");
-        
-        $("#importform").attr('action', pad_root_path + "/import"); 
+
+        $("#importform").attr('action', pad_root_path + "/import");
       }
-    
+
       $("#impexp-close").click(function()
       {
         paddocbar.setShownPanel(null);
@@ -314,17 +314,6 @@ var padimpexp = (function()
       $("#impexp-disabled-clickcatcher").hide();
       $("#import").css('opacity', 1);
       $("#impexp-export").css('opacity', 1);
-    },
-    export2Wordle: function()
-    {
-      var padUrl = $('#exportwordlea').attr('href').replace(/\/wordle$/, '/txt')
-      
-      $.get(padUrl, function(data) 
-      {
-        $('.result').html(data);
-        $('#text').html(data);
-        $('#wordlepost').submit();
-      });
     }
   };
   return self;

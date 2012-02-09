@@ -46,9 +46,8 @@ exports.doExport = function(req, res, pad, type) {
 
   //tell the browser that this is a downloadable file
   res.attachment(pad.id + "." + type);
-
   //if this is a plain text export, we can do this directly
-  if(type == "txt") {
+  if(type == "txt" || type == "wordle") {
       if(req.params.rev){
         pad.getInternalRevisionAText(req.params.rev, function(junk, text) {
           res.send(text.text ? text.text : null);

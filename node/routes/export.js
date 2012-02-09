@@ -7,7 +7,7 @@ module.exports = function(app)
 
   //serve timeslider.html under /p/$padname/timeslider
   app.get('/p/:pad/:rev?/export/:type', hasPadAccess, getPad, function(req, res, next) {
-    var types = ["pdf", "doc", "txt", "html", "odt", "dokuwiki"];
+    var types = ["pdf", "doc", "txt", "html", "odt", "dokuwiki", "wordle"];
     //send a 404 if we don't support this filetype
     if(types.indexOf(req.params.type) == -1) {
       next();
