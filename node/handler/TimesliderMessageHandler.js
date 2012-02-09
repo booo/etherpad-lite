@@ -1,6 +1,6 @@
 /**
- * The MessageHandler handles all Messages that comes from Socket.IO and controls the sessions 
- */ 
+ * The MessageHandler handles all Messages that comes from Socket.IO and controls the sessions
+ */
 
 /*
  * Copyright 2009 Google Inc., 2011 Peter 'Pita' Martischka (Primary Technology Ltd)
@@ -28,82 +28,88 @@ var authorManager = require("../db/AuthorManager");
 var log4js = require('log4js');
 var messageLogger = log4js.getLogger("message");
 
-/**
- * Saves the Socket class we need to send and recieve data from the client
- */
-var socketio;
+
+var TimesliderMessageHandler = function TimesliderMessageHandler(settings, padManager, authorManager) {
+    this.settings = settings;
+    this.padManager = padManager;
+    this.authorManager = authorManager;
+    /**
+     * Saves the Socket class we need to send and recieve data from the client
+     */
+    this.socketio = undefined;
+};
+
+exports.TimesliderMessageHandler = TimesliderMessageHandler;
 
 /**
  * This Method is called by server.js to tell the message handler on which socket it should send
  * @param socket_io The Socket
  */
-exports.setSocketIO = function(socket_io)
-{
-  socketio=socket_io;
-}
+TimesliderMessageHandler.prototype.setSocketIO = function(socket_io) {
+  this.socketio=socket_io;
+};
 
 /**
  * Handles the connection of a new user
  * @param client the new client
  */
-exports.handleConnect = function(client)
-{
+//FIXME dead code
+TimesliderMessageHandler.prototype.handleConnect = function(client) {
 
-}
+};
 
 /**
  * Handles the disconnection of a user
  * @param client the client that leaves
  */
-exports.handleDisconnect = function(client)
-{
-  
-}
+//FIXME dead code
+TimesliderMessageHandler.prototype.handleDisconnect = function(client) {
+};
 
 /**
  * Handles a message from a user
  * @param client the client that send this message
  * @param message the message from the client
  */
-exports.handleMessage = function(client, message)
-{ 
+TimesliderMessageHandler.prototype.handleMessage = function(client, message)
+{
   //Check what type of message we get and delegate to the other methodes
   if(message.type == "CLIENT_READY")
   {
-    handleClientReady(client, message);
+    this.handleClientReady(client, message);
   }
   else if(message.type == "CHANGESET_REQ")
   {
-    handleChangesetRequest(client, message);
+    this.handleChangesetRequest(client, message);
   }
   //if the message type is unkown, throw an exception
   else
   {
     messageLogger.warn("Dropped message, unknown Message Type: '" + message.type + "'");
   }
-}
+};
 
-function handleClientReady(client, message)
+TimesliderMessageHandler.prototype.handleClientReady = function handleClientReady(client, message)
 {
   if(message.padId == null)
   {
     messageLogger.warn("Dropped message, changeset request has no padId!");
     return;
   }
-  
+
   //send the timeslider client the clientVars, with this values its able to start
-  createTimesliderClientVars (message.padId, function(err, clientVars)
+  this.createTimesliderClientVars (message.padId, function(err, clientVars)
   {
     ERR(err);
-    
+
     client.json.send({type: "CLIENT_VARS", data: clientVars});
-  })
-}
+  });
+};
 
 /**
- * Handles a request for a rough changeset, the timeslider client needs it 
+ * Handles a request for a rough changeset, the timeslider client needs it
  */
-function handleChangesetRequest(client, message)
+TimesliderMessageHandler.prototype.handleChangesetRequest = function handleChangesetRequest(client, message)
 {
   //check if all ok
   if(message.data == null)
@@ -131,26 +137,28 @@ function handleChangesetRequest(client, message)
     messageLogger.warn("Dropped message, changeset request has no requestID!");
     return;
   }
-  
+
   var granularity = message.data.granularity;
   var start = message.data.start;
   var end = start + (100 * granularity);
   var padId = message.padId;
-  
+
   //build the requested rough changesets and send them back
-  getChangesetInfo(padId, start, end, granularity, function(err, changesetInfo)
+  this.getChangesetInfo(padId, start, end, granularity, function(err, changesetInfo)
   {
     ERR(err);
-    
+
     var data = changesetInfo;
     data.requestID = message.data.requestID;
-    
+
     client.json.send({type: "CHANGESET_REQ", data: data});
   });
-}
+};
 
-function createTimesliderClientVars (padId, callback)
+//FIXME pass this through renderer
+TimesliderMessageHandler.prototype.createTimesliderClientVars = function createTimesliderClientVars (padId, callback)
 {
+  var that = this;
   var clientVars = {
     viewId: padId,
     colorPalette: ["#ffc7c7", "#fff1c7", "#e3ffc7", "#c7ffd5", "#c7ffff", "#c7d5ff", "#e3c7ff", "#ffc7f1", "#ff8f8f", "#ffe38f", "#c7ff8f", "#8fffab", "#8fffff", "#8fabff", "#c78fff", "#ff8fe3", "#d97979", "#d9c179", "#a9d979", "#79d991", "#79d9d9", "#7991d9", "#a979d9", "#d979c1", "#d9a9a9", "#d9cda9", "#c1d9a9", "#a9d9b5", "#a9d9d9", "#a9b5d9", "#c1a9d9", "#d9a9cd"],
@@ -161,7 +169,7 @@ function createTimesliderClientVars (padId, callback)
     fullWidth: false,
     disableRightBar: false,
     initialChangesets: [],
-    abiwordAvailable: settings.abiwordAvailable(), 
+    abiwordAvailable: that.settings.abiwordAvailable(),
     hooks: [],
     initialStyledContents: {}
   };
@@ -172,24 +180,24 @@ function createTimesliderClientVars (padId, callback)
     //get the pad from the database
     function(callback)
     {
-      padManager.getPad(padId, function(err, _pad)
-      {        
+      that.padManager.getPad(padId, function(err, _pad)
+      {
         if(ERR(err, callback)) return;
         pad = _pad;
         callback();
       });
     },
-    //get all authors and add them to 
+    //get all authors and add them to
     function(callback)
     {
       var historicalAuthorData = {};
       //get all authors out of the attribut pool
       var authors = pad.getAllAuthors();
-      
+
       //get all author data out of the database
       async.forEach(authors, function(authorId, callback)
       {
-        authorManager.getAuthor(authorId, function(err, author)
+        that.authorManager.getAuthor(authorId, function(err, author)
         {
           if(ERR(err, callback)) return;
           historicalAuthorData[authorId] = author;
@@ -218,28 +226,28 @@ function createTimesliderClientVars (padId, callback)
     {
       //get the head revision Number
       var lastRev = pad.getHeadRevisionNumber();
-      
+
       //add the revNum to the client Vars
       clientVars.revNum = lastRev;
       clientVars.totalRevs = lastRev;
-      
+
       var atext = Changeset.cloneAText(pad.atext);
       var attribsForWire = Changeset.prepareForWire(atext.attribs, pad.pool);
       var apool = attribsForWire.pool.toJsonable();
       atext.attribs = attribsForWire.translated;
-      
+
       clientVars.initialStyledContents.apool = apool;
       clientVars.initialStyledContents.atext = atext;
-      
+
       var granularities = [100, 10, 1];
 
       //get the latest rough changesets
       async.forEach(granularities, function(granularity, callback)
       {
         var topGranularity = granularity*10;
-        
-        getChangesetInfo(padId, Math.floor(lastRev / topGranularity)*topGranularity, 
-                         Math.floor(lastRev / topGranularity)*topGranularity+topGranularity, granularity, 
+
+        that.getChangesetInfo(padId, Math.floor(lastRev / topGranularity)*topGranularity,
+                         Math.floor(lastRev / topGranularity)*topGranularity+topGranularity, granularity,
                          function(err, changeset)
         {
           if(ERR(err, callback)) return;
@@ -259,8 +267,9 @@ function createTimesliderClientVars (padId, callback)
  * Tries to rebuild the getChangestInfo function of the original Etherpad
  * https://github.com/ether/pad/blob/master/etherpad/src/etherpad/control/pad/pad_changeset_control.js#L144
  */
-function getChangesetInfo(padId, startNum, endNum, granularity, callback)
+TimesliderMessageHandler.prototype.getChangesetInfo = function getChangesetInfo(padId, startNum, endNum, granularity, callback)
 {
+  var that = this;
   var forwardsChangesets = [];
   var backwardsChangesets = [];
   var timeDeltas = [];
@@ -269,47 +278,47 @@ function getChangesetInfo(padId, startNum, endNum, granularity, callback)
   var composedChangesets = {};
   var revisionDate = [];
   var lines;
-  
+
   async.series([
     //get the pad from the database
     function(callback)
     {
-      padManager.getPad(padId, function(err, _pad)
-      {        
+      that.padManager.getPad(padId, function(err, _pad)
+      {
         if(ERR(err, callback)) return;
         pad = _pad;
         callback();
       });
     },
     function(callback)
-    {      
+    {
       //calculate the last full endnum
       var lastRev = pad.getHeadRevisionNumber();
       if (endNum > lastRev+1) {
         endNum = lastRev+1;
       }
       endNum = Math.floor(endNum / granularity)*granularity;
-      
+
       var compositesChangesetNeeded = [];
       var revTimesNeeded = [];
-      
+
       //figure out which composite Changeset and revTimes we need, to load them in bulk
       var compositeStart = startNum;
-      while (compositeStart < endNum) 
+      while (compositeStart < endNum)
       {
         var compositeEnd = compositeStart + granularity;
-        
+
         //add the composite Changeset we needed
         compositesChangesetNeeded.push({start: compositeStart, end: compositeEnd});
-        
+
         //add the t1 time we need
         revTimesNeeded.push(compositeStart == 0 ? 0 : compositeStart - 1);
         //add the t2 time we need
         revTimesNeeded.push(compositeEnd - 1);
-        
+
         compositeStart += granularity;
       }
-      
+
       //get all needed db values parallel
       async.parallel([
         function(callback)
@@ -317,7 +326,7 @@ function getChangesetInfo(padId, startNum, endNum, granularity, callback)
           //get all needed composite Changesets
           async.forEach(compositesChangesetNeeded, function(item, callback)
           {
-            composePadChangesets(padId, item.start, item.end, function(err, changeset)
+            that.composePadChangesets(padId, item.start, item.end, function(err, changeset)
             {
               if(ERR(err, callback)) return;
               composedChangesets[item.start + "/" + item.end] = changeset;
@@ -341,63 +350,63 @@ function getChangesetInfo(padId, startNum, endNum, granularity, callback)
         //get the lines
         function(callback)
         {
-          getPadLines(padId, startNum-1, function(err, _lines)
+          that.getPadLines(padId, startNum-1, function(err, _lines)
           {
             if(ERR(err, callback)) return;
             lines = _lines;
             callback();
-          }); 
+          });
         }
       ], callback);
     },
     //doesn't know what happens here excatly :/
     function(callback)
-    {    
+    {
       var compositeStart = startNum;
-      
-      while (compositeStart < endNum) 
+
+      while (compositeStart < endNum)
       {
-        if (compositeStart + granularity > endNum) 
+        if (compositeStart + granularity > endNum)
         {
           break;
         }
-        
+
         var compositeEnd = compositeStart + granularity;
-      
+
         var forwards = composedChangesets[compositeStart + "/" + compositeEnd];
         var backwards = Changeset.inverse(forwards, lines.textlines, lines.alines, pad.apool());
-        
+
         Changeset.mutateAttributionLines(forwards, lines.alines, pad.apool());
         Changeset.mutateTextLines(forwards, lines.textlines);
-      
+
         var forwards2 = Changeset.moveOpsToNewPool(forwards, pad.apool(), apool);
         var backwards2 = Changeset.moveOpsToNewPool(backwards, pad.apool(), apool);
-        
+
         var t1, t2;
-        if (compositeStart == 0) 
+        if (compositeStart == 0)
         {
           t1 = revisionDate[0];
         }
-        else 
+        else
         {
           t1 = revisionDate[compositeStart - 1];
         }
-        
+
         t2 = revisionDate[compositeEnd - 1];
-        
+
         timeDeltas.push(t2 - t1);
         forwardsChangesets.push(forwards2);
         backwardsChangesets.push(backwards2);
-        
+
         compositeStart += granularity;
       }
-      
+
       callback();
     }
   ], function(err)
   {
     if(ERR(err, callback)) return;
-    
+
     callback(null, {forwardsChangesets: forwardsChangesets,
                     backwardsChangesets: backwardsChangesets,
                     apool: apool.toJsonable(),
@@ -406,24 +415,26 @@ function getChangesetInfo(padId, startNum, endNum, granularity, callback)
                     start: startNum,
                     granularity: granularity });
   });
-}
+};
 
 /**
  * Tries to rebuild the getPadLines function of the original Etherpad
  * https://github.com/ether/pad/blob/master/etherpad/src/etherpad/control/pad/pad_changeset_control.js#L263
  */
-function getPadLines(padId, revNum, callback) 
+TimesliderMessageHandler.prototype.getPadLines = function getPadLines(padId, revNum, callback)
 {
   var atext;
   var result = {};
   var pad;
 
+  var that = this;
+
   async.series([
     //get the pad from the database
     function(callback)
     {
-      padManager.getPad(padId, function(err, _pad)
-      {        
+      that.padManager.getPad(padId, function(err, _pad)
+      {
         if(ERR(err, callback)) return;
         pad = _pad;
         callback();
@@ -458,24 +469,25 @@ function getPadLines(padId, revNum, callback)
     if(ERR(err, callback)) return;
     callback(null, result);
   });
-}
+};
 
 /**
  * Tries to rebuild the composePadChangeset function of the original Etherpad
  * https://github.com/ether/pad/blob/master/etherpad/src/etherpad/control/pad/pad_changeset_control.js#L241
  */
-function composePadChangesets(padId, startNum, endNum, callback)
+TimesliderMessageHandler.prototype.composePadChangesets = function composePadChangesets(padId, startNum, endNum, callback)
 {
   var pad;
   var changesets = [];
   var changeset;
+  var that = this;
 
   async.series([
     //get the pad from the database
     function(callback)
     {
-      padManager.getPad(padId, function(err, _pad)
-      {        
+      that.padManager.getPad(padId, function(err, _pad)
+      {
         if(ERR(err, callback)) return;
         pad = _pad;
         callback();
@@ -485,14 +497,14 @@ function composePadChangesets(padId, startNum, endNum, callback)
     function(callback)
     {
       var changesetsNeeded=[];
-      
-      //create a array for all changesets, we will 
+
+      //create a array for all changesets, we will
       //replace the values with the changeset later
       for(var r=startNum;r<endNum;r++)
       {
         changesetsNeeded.push(r);
       }
-      
+
       //get all changesets
       async.forEach(changesetsNeeded, function(revNum,callback)
       {
@@ -509,13 +521,13 @@ function composePadChangesets(padId, startNum, endNum, callback)
     {
       changeset = changesets[startNum];
       var pool = pad.apool();
-      
+
       for(var r=startNum+1;r<endNum;r++)
       {
         var cs = changesets[r];
         changeset = Changeset.compose(changeset, cs, pool);
       }
-      
+
       callback(null);
     }
   ],
@@ -525,4 +537,4 @@ function composePadChangesets(padId, startNum, endNum, callback)
     if(ERR(err, callback)) return;
     callback(null, changeset);
   });
-}
+};

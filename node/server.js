@@ -41,6 +41,7 @@ var GroupManager = require('./db/GroupManager').GroupManager;
 var SessionManager = require('./db/SessionManager').SessionManager;
 var SocketIORouter = require("./handler/SocketIORouter").SocketIORouter;
 var PadMessageHandler = require("./handler/PadMessageHandler").PadMessageHandler;
+var TimesliderMessageHandler = require("./handler/TimesliderMessageHandler").TimesliderMessageHandler;
 
 //try to get the git version
 var version = "";
@@ -256,15 +257,15 @@ async.waterfall([
 
     app.padMessageHandler = new PadMessageHandler(app.settings, app.padManager, app.authorManager, app.readOnlyManager, app.securityManager);
 
-    //var timesliderMessageHandler = require("./handler/TimesliderMessageHandler");
 
 
     //Initalize the Socket.IO Router
     //
     app.socketIORouter = new SocketIORouter(app.securityManager);
+    app.timesliderMessageHandler = new TimesliderMessageHandler(app.settings, app.padManager, app.authorManager);
     app.socketIORouter.setSocketIO(io);
     app.socketIORouter.addComponent("pad", app.padMessageHandler);
-    //socketIORouter.addComponent("timeslider", timesliderMessageHandler);
+    app.socketIORouter.addComponent("timeslider", app.timesliderMessageHandler);
 
     callback(null);
   }
