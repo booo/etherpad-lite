@@ -29,24 +29,23 @@ module.exports = function(app)
   });
 };
 
-module.exports.hasPadAccess = function(app)
-{
+module.exports.hasPadAccess = function(app) {
 
   //checks for padAccess
-  var hasPadAccess = function hasPadAccess(req, res, callback)
-  {
-    app.securityManager.checkAccess(req.params.pad, req.cookies.sessionid, req.cookies.token, req.cookies.password, function(err, accessObj)
-    {
-      if(ERR(err, callback)) return;
-
+  var hasPadAccess = function hasPadAccess(req, res, next) {
+    app.securityManager.checkAccess(req.params.pad, req.cookies.sessionid, req.cookies.token, req.cookies.password, function(error, accessObj) {
+      if(error) {
+        console.log('checkAcces error: ' + error);
+        next(error);
+      }
       //there is access, continue
-      if(accessObj.accessStatus == "grant")
-      {
-        callback();
+      if(accessObj.accessStatus == "grant") {
+
+        next();
       }
       //no access
-      else
-      {
+      else {
+        console.log('access not granted');
         res.send("403 - Can't touch this", 403);
       }
     });
@@ -54,4 +53,18 @@ module.exports.hasPadAccess = function(app)
 
   return hasPadAccess;
 
+};
+
+module.exports.getPad = function(app) {
+    var getPad = function getPad(req, res, next) {
+        app.padManager.getPad(req.params.pad, function(error, pad){
+            if(error) {
+                next(error);
+            } else {
+                req.pad = pad;
+                next();
+            }
+        });
+    };
+    return getPad;
 };

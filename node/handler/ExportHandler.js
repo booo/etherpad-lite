@@ -26,6 +26,7 @@ var fs = require("fs");
 var settings = require('../utils/Settings');
 var os = require('os');
 
+//TODO fixme
 //load abiword only if its enabled
 if(settings.abiword != null)
   var abiword = require("../utils/Abiword");
@@ -64,7 +65,7 @@ exports.doExport = function(req, res, pad, type) {
       //render the dokuwiki document
       function(callback)
       {
-        exportdokuwiki.getPadDokuWikiDocument(pad.id, req.params.rev, function(err, dokuwiki)
+        exportdokuwiki.getPadDokuWikiDocument(pad, req.params.rev, function(err, dokuwiki)
         {
           res.send(dokuwiki);
           callback("stop");

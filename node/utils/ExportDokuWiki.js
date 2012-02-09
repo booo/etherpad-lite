@@ -16,7 +16,6 @@
 
 var async = require("async");
 var Changeset = require("./Changeset");
-var padManager = require("../db/PadManager");
 
 function getPadDokuWiki(pad, revNum, callback)
 {
@@ -298,22 +297,11 @@ function _analyzeLine(text, aline, apool)
   return line;
 }
 
-exports.getPadDokuWikiDocument = function (padId, revNum, callback)
-{
-  padManager.getPad(padId, function (err, pad)
-  {
-    if (err)
-    {
-      callback(err);
-      return;
-    }
-
+exports.getPadDokuWikiDocument = function (pad, revNum, callback) {
     getPadDokuWiki(pad, revNum, callback);
-  });
-}
+};
 
-function _escapeDokuWiki(s)
-{
+function _escapeDokuWiki(s) {
   s = s.replace(/(\/\/|\*\*|__)/g, '%%$1%%');
   return s;
 }

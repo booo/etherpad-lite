@@ -3,14 +3,13 @@ var ERR = require("async-stacktrace");
 module.exports = function(app)
 {
   var hasPadAccess = require('./preconditions').hasPadAccess(app);
+  var getPad = require('./preconditions').getPad(app);
 
   //serve timeslider.html under /p/$padname/timeslider
-  app.get('/p/:pad/:rev?/export/:type', function(req, res, next)
-  {
+  app.get('/p/:pad/:rev?/export/:type', hasPadAccess, getPad, function(req, res, next) {
     var types = ["pdf", "doc", "txt", "html", "odt", "dokuwiki"];
     //send a 404 if we don't support this filetype
-    if(types.indexOf(req.params.type) == -1)
-    {
+    if(types.indexOf(req.params.type) == -1) {
       next();
       return;
     }
@@ -25,18 +24,8 @@ module.exports = function(app)
 
     res.header("Access-Control-Allow-Origin", "*");
 
-    hasPadAccess(req, res, function()
-    {
-      app.padManager.getPad(req.params.pad, function(error, pad){
-        //FIXME error handling
-        if(error) {
-            next(error);
-        } else {
-            app.exportHandler.doExport(req, res, pad, req.params.type);
-        }
+    app.exportHandler.doExport(req, res, req.pad, req.params.type);
 
-      });
-    });
   });
 
 };
