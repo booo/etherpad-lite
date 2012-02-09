@@ -27,7 +27,15 @@ module.exports = function(app)
 
     hasPadAccess(req, res, function()
     {
-      app.exportHandler.doExport(req, res, req.params.pad, req.params.type);
+      app.padManager.getPad(req.params.pad, function(error, pad){
+        //FIXME error handling
+        if(error) {
+            next(error);
+        } else {
+            app.exportHandler.doExport(req, res, pad, req.params.type);
+        }
+
+      });
     });
   });
 

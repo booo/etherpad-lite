@@ -21,7 +21,6 @@
 var ERR = require("async-stacktrace");
 var exporthtml = require("../utils/ExportHtml");
 var exportdokuwiki = require("../utils/ExportDokuWiki");
-var padManager = require("../db/PadManager");
 var async = require("async");
 var fs = require("fs");
 var settings = require('../utils/Settings');
@@ -33,40 +32,31 @@ if(settings.abiword != null)
 
 var tempDirectory = "/tmp";
 
-//tempDirectory changes if the operating system is windows 
+//tempDirectory changes if the operating system is windows
 if(os.type().indexOf("Windows") > -1)
 {
   tempDirectory = process.env.TEMP;
 }
-  
+
 /**
  * do a requested export
- */ 
-exports.doExport = function(req, res, padId, type)
-{
+ */
+exports.doExport = function(req, res, pad, type) {
+
   //tell the browser that this is a downloadable file
-  res.attachment(padId + "." + type);
+  res.attachment(pad.id + "." + type);
 
   //if this is a plain text export, we can do this directly
-  if(type == "txt")
-  {
-    padManager.getPad(padId, function(err, pad)
-    {
-      ERR(err);
+  if(type == "txt") {
       if(req.params.rev){
-        pad.getInternalRevisionAText(req.params.rev, function(junk, text)
-        {
+        pad.getInternalRevisionAText(req.params.rev, function(junk, text) {
           res.send(text.text ? text.text : null);
         });
       }
-      else
-      {
+      else {
         res.send(pad.text());
       }
-    });
-  }
-  else if(type == 'dokuwiki')
-  {
+  } else if(type == 'dokuwiki') {
     var randNum;
     var srcFile, destFile;
 
@@ -74,7 +64,7 @@ exports.doExport = function(req, res, padId, type)
       //render the dokuwiki document
       function(callback)
       {
-        exportdokuwiki.getPadDokuWikiDocument(padId, req.params.rev, function(err, dokuwiki)
+        exportdokuwiki.getPadDokuWikiDocument(pad.id, req.params.rev, function(err, dokuwiki)
         {
           res.send(dokuwiki);
           callback("stop");
@@ -85,8 +75,7 @@ exports.doExport = function(req, res, padId, type)
       if(err && err != "stop") throw err;
     });
   }
-  else
-  {
+  else {
     var html;
     var randNum;
     var srcFile, destFile;
@@ -95,12 +84,12 @@ exports.doExport = function(req, res, padId, type)
       //render the html document
       function(callback)
       {
-        exporthtml.getPadHTMLDocument(padId, req.params.rev, false, function(err, _html)
+        exporthtml.getPadHTMLDocument(pad, req.params.rev, false, function(err, _html)
         {
           if(ERR(err, callback)) return;
           html = _html;
           callback();
-        });   
+        });
       },
       //decide what to do with the html export
       function(callback)
@@ -109,13 +98,13 @@ exports.doExport = function(req, res, padId, type)
         if(type == "html")
         {
           res.send(html);
-          callback("stop");  
+          callback("stop");
         }
         else //write the html export to a file
         {
           randNum = Math.floor(Math.random()*0xFFFFFFFF);
           srcFile = tempDirectory + "/eplite_export_" + randNum + ".html";
-          fs.writeFile(srcFile, html, callback); 
+          fs.writeFile(srcFile, html, callback);
         }
       },
       //send the convert job to abiword
@@ -123,7 +112,7 @@ exports.doExport = function(req, res, padId, type)
       {
         //ensure html can be collected by the garbage collector
         html = null;
-      
+
         destFile = tempDirectory + "/eplite_export_" + randNum + "." + type;
         abiword.convertFile(srcFile, destFile, type, callback);
       },
@@ -145,7 +134,7 @@ exports.doExport = function(req, res, padId, type)
             //100ms delay to accomidate for slow windows fs
             if(os.type().indexOf("Windows") > -1)
             {
-              setTimeout(function() 
+              setTimeout(function()
               {
                 fs.unlink(destFile, callback);
               }, 100);
@@ -160,6 +149,6 @@ exports.doExport = function(req, res, padId, type)
     ], function(err)
     {
       if(err && err != "stop") ERR(err);
-    })
+    });
   }
 };

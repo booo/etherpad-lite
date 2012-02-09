@@ -16,7 +16,6 @@
 
 var async = require("async");
 var Changeset = require("./Changeset");
-var padManager = require("../db/PadManager");
 var ERR = require("async-stacktrace");
 
 function getPadPlainText(pad, revNum)
@@ -458,12 +457,8 @@ function _analyzeLine(text, aline, apool)
   return line;
 }
 
-exports.getPadHTMLDocument = function (padId, revNum, noDocType, callback)
+exports.getPadHTMLDocument = function (pad, revNum, noDocType, callback)
 {
-  padManager.getPad(padId, function (err, pad)
-  {
-    if(ERR(err, callback)) return;
-
     var head = 
       (noDocType ? '' : '<!doctype html>\n') + 
       '<html lang="en">\n' + (noDocType ? '' : '<head>\n' + 
@@ -485,13 +480,11 @@ exports.getPadHTMLDocument = function (padId, revNum, noDocType, callback)
 
     var foot = '</body>\n</html>\n';
 
-    getPadHTML(pad, revNum, function (err, html)
-    {
+    getPadHTML(pad, revNum, function (err, html) {
       if(ERR(err, callback)) return;
       callback(null, head + html + foot);
     });
-  });
-}
+};
 
 function _escapeHTML(s)
 {
