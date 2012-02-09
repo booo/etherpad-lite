@@ -53,8 +53,6 @@ var serverName = "Etherpad-Lite " + version + " (http://j.mp/ep-lite)";
 
 var settings = parseSettings(__dirname + '/../settings.json');
 
-//cache 6 hours
-exports.maxAge = 1000*60*60*6;
 
 //set loglevel
 log4js.setGlobalLogLevel(settings.logLevel);
@@ -71,7 +69,6 @@ async.waterfall([
     //create server
     var app = express.createServer();
 
-    app.maxAge = exports.maxAge;
     app.settings = settings;
 
     app.use(function (req, res, next) {
