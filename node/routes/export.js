@@ -24,7 +24,15 @@ module.exports = function(app)
 
     res.header("Access-Control-Allow-Origin", "*");
 
-    app.exportHandler.doExport(req, res, req.pad, req.params.type);
+    app.exportHandler.doExport(req.pad, req.params.rev, req.params.type, function(error, content) {
+        if(error) {
+              next(error);
+        } else {
+              //tell the browser that this is a downloadable file
+              res.attachment(req.pad.id + "." + req.params.type);
+              res.send(content);
+        }
+    });
 
   });
 

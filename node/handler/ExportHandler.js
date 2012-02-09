@@ -18,18 +18,15 @@
  * limitations under the License.
  */
 
+var os = require('os');
+var fs = require("fs");
+
+var async = require("async");
 var ERR = require("async-stacktrace");
+
 var exporthtml = require("../utils/ExportHtml");
 var exportdokuwiki = require("../utils/ExportDokuWiki");
-var async = require("async");
-var fs = require("fs");
 var settings = require('../utils/Settings');
-var os = require('os');
-
-//TODO fixme
-//load abiword only if its enabled
-if(settings.abiword != null)
-  var abiword = require("../utils/Abiword");
 
 var tempDirectory = "/tmp";
 
@@ -42,49 +39,51 @@ if(os.type().indexOf("Windows") > -1)
 /**
  * do a requested export
  */
-exports.doExport = function(req, res, pad, type) {
+exports.doExport = function(pad, rev, type, callback) {
 
-  //tell the browser that this is a downloadable file
-  res.attachment(pad.id + "." + type);
   //if this is a plain text export, we can do this directly
   if(type == "txt" || type == "wordle") {
-      if(req.params.rev){
-        pad.getInternalRevisionAText(req.params.rev, function(junk, text) {
-          res.send(text.text ? text.text : null);
+      if(rev){
+        pad.getInternalRevisionAText(rev, function(error, text) {
+            if(error) {
+                callback(error, null);
+            } else {
+                callback(null, text.text ? text.text : null);
+            }
         });
-      }
-      else {
-        res.send(pad.text());
+      } else {
+        callback(null, pad.text());
       }
   } else if(type == 'dokuwiki') {
-    var randNum;
-    var srcFile, destFile;
-
-    async.series([
       //render the dokuwiki document
-      function(callback)
-      {
-        exportdokuwiki.getPadDokuWikiDocument(pad, req.params.rev, function(err, dokuwiki)
-        {
-          res.send(dokuwiki);
-          callback("stop");
+        exportdokuwiki.getPadDokuWikiDocument(pad, rev, function(error, dokuwiki) {
+          if (error) {
+            //FIXME 500 new Error(500, "A Message")
+            callback("docuwiki export problem", null);
+          } else {
+            callback(null, dokuwiki);
+          }
         });
-      },
-    ], function(err)
-    {
-      if(err && err != "stop") throw err;
-    });
-  }
-  else {
+  } else if(type == 'html') {
+      exporthtml.getPadHTMLDocument(pad, rev, false, function(error, html){
+        if(error) {
+            callback(error);
+        } else {
+            callback(error, html);
+        }
+      });
+  } else {
+    var fn = callback; //FIXME ugly
+    //abiword export
+    var abiword = require("../utils/Abiword");
     var html;
     var randNum;
     var srcFile, destFile;
-
+    var content;
     async.series([
       //render the html document
-      function(callback)
-      {
-        exporthtml.getPadHTMLDocument(pad, req.params.rev, false, function(err, _html)
+      function(callback) {
+        exporthtml.getPadHTMLDocument(pad, rev, false, function(err, _html)
         {
           if(ERR(err, callback)) return;
           html = _html;
@@ -94,22 +93,13 @@ exports.doExport = function(req, res, pad, type) {
       //decide what to do with the html export
       function(callback)
       {
-        //if this is a html export, we can send this from here directly
-        if(type == "html")
-        {
-          res.send(html);
-          callback("stop");
-        }
-        else //write the html export to a file
-        {
-          randNum = Math.floor(Math.random()*0xFFFFFFFF);
-          srcFile = tempDirectory + "/eplite_export_" + randNum + ".html";
-          fs.writeFile(srcFile, html, callback);
-        }
+            //write the html export to a file
+            randNum = Math.floor(Math.random()*0xFFFFFFFF);
+            srcFile = tempDirectory + "/eplite_export_" + randNum + ".html";
+            fs.writeFile(srcFile, html, callback);
       },
       //send the convert job to abiword
-      function(callback)
-      {
+      function(callback) {
         //ensure html can be collected by the garbage collector
         html = null;
 
@@ -117,38 +107,35 @@ exports.doExport = function(req, res, pad, type) {
         abiword.convertFile(srcFile, destFile, type, callback);
       },
       //send the file
-      function(callback)
-      {
-        res.sendfile(destFile, null, callback);
+      function(callback) {
+        //FIXME async!
+        content = fs.readFileSync(destFile);
+        callback();
       },
       //clean up temporary files
-      function(callback)
-      {
+      function(callback) {
         async.parallel([
-          function(callback)
-          {
+          function(callback) {
             fs.unlink(srcFile, callback);
           },
-          function(callback)
-          {
+          function(callback) {
             //100ms delay to accomidate for slow windows fs
-            if(os.type().indexOf("Windows") > -1)
-            {
-              setTimeout(function()
-              {
+            if(os.type().indexOf("Windows") > -1) {
+              setTimeout(function() {
                 fs.unlink(destFile, callback);
               }, 100);
-            }
-            else
-            {
+            } else {
               fs.unlink(destFile, callback);
             }
           }
         ], callback);
       }
-    ], function(err)
-    {
-      if(err && err != "stop") ERR(err);
+    ], function(error) {
+        if(error) {
+            callback(error);
+        } else {
+            callback(null, content);
+        }
     });
   }
 };
