@@ -20,16 +20,27 @@
  * limitations under the License.
  */
 
-var log4js = require('log4js');
-var os = require("os");
-var socketio = require('socket.io');
 var fs = require('fs');
-var parseSettings = require('./utils/Settings').parseSettings;
-var db = require('./db/DB');
+var os = require("os");
+var path = require('path');
+
 var async = require('async');
 var express = require('express');
-var path = require('path');
+var log4js = require('log4js');
+var socketio = require('socket.io');
+
+var db = require('./db/DB');
 var minify = require('./utils/Minify');
+var parseSettings = require('./utils/Settings').parseSettings;
+
+var PadManager = require('./db/PadManager').PadManager;
+var ReadOnlyManager = require('./db/ReadOnlyManager').ReadOnlyManager;
+var SecurityManager = require('./db/SecurityManager').SecurityManager;
+var AuthorManager = require('./db/AuthorManager').AuthorManager;
+var GroupManager = require('./db/GroupManager').GroupManager;
+var SessionManager = require('./db/SessionManager').SessionManager;
+var SocketIORouter = require("./handler/SocketIORouter").SocketIORouter;
+var PadMessageHandler = require("./handler/PadMessageHandler").PadMessageHandler;
 
 //try to get the git version
 var version = "";
@@ -79,17 +90,6 @@ async.waterfall([
     //preconditions i.e. sanitize urls
     require('./routes/preconditions')(app);
 
-    var PadManager = require('./db/PadManager').PadManager;
-
-    var ReadOnlyManager = require('./db/ReadOnlyManager').ReadOnlyManager;
-
-    var SecurityManager = require('./db/SecurityManager').SecurityManager;
-
-    var AuthorManager = require('./db/AuthorManager').AuthorManager;
-
-    var GroupManager = require('./db/GroupManager').GroupManager;
-
-    var SessionManager = require('./db/SessionManager').SessionManager;
 
     //load modules that needs a initalized db
     app.readOnlyManager = new ReadOnlyManager(dbInstance);
@@ -110,7 +110,6 @@ async.waterfall([
 
     //app.apiHandler = require('./handler/APIHandler');
 
-    var SocketIORouter = require("./handler/SocketIORouter").SocketIORouter;
 
     //install logging
     var httpLogger = log4js.getLogger("http");
@@ -254,7 +253,6 @@ async.waterfall([
     if(settings.minify)
       io.enable('browser client minification');
 
-    var PadMessageHandler = require("./handler/PadMessageHandler").PadMessageHandler;
 
     app.padMessageHandler = new PadMessageHandler(app.settings, app.padManager, app.authorManager, app.readOnlyManager, app.securityManager);
 
