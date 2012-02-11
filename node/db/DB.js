@@ -28,9 +28,8 @@ var log4js = require('log4js');
  */
 exports.init = function init(settings, callback) {
     //set database settings
-    console.log(settings);
     var db = new ueberDB.database(settings.dbType, settings.dbSettings, null, log4js.getLogger("ueberDB"));
-    
+
     //initalize the database async
     db.init(function(error){
     //there was an error while initializing the database, output it and stop
